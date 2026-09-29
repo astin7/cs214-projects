@@ -1,0 +1,126 @@
+CS214 P2
+--------
+Authors: Angel Bomova , Astin Huynh
+NetIDs: aab405 , ah1656
+
+How to build/run
+----------------
+cd P2
+make
+./compare path...
+
+Files
+-----
+main.c - WRITE HERE WHEN DONE
+wordlist.c - linked list implementation for storing words and counts
+wordlist.h - struct definitions and function declarations for word list
+tokenizer.c - reads files using open/read and extracts words
+tokenizer.h - tokenizer function declarations
+traverse.c - recursively traverses directories and collects valid files
+traverse.h - traversal function declarations
+compare.c - computes JSD and sorts/prints results
+compare.h - comparison structures and function declarations
+Makefile - builds compare executable
+AUTHOR - NetIDs in this file
+README - README file
+
+Program design
+--------------
+Word Frequency Distribution (WFD):
+Each file is represented as a linked list of nodes.
+Each node contains:
+word (string)
+count (integer)
+next pointer
+
+When a word is read:
+search list for the word
+increment count if found
+otherwise insert new node
+
+After reading the file:
+counts are converted into frequencies by dividing by total word count
+
+Tokenization:
+Files are read using POSIX system calls:
+open(), read(), close()
+Files are processed using buffered reads for efficiency.
+
+Words are defined as sequences of:
+letters, numbers, and hyphen (-)
+All other characters are ignored
+Words are separated by whitespace
+Words are converted to lowercase for case-insensitivity
+No maximum word length is assumed (dynamic allocation used)
+
+Directory traversal:
+Uses opendir(), readdir(), closedir()
+Recursively explores directories
+
+Rules:
+files passed as arguments are always included
+only files ending in ".txt" are included from directories
+hidden files/directories (starting with '.') are ignored
+
+Jensen-Shannon Distance (JSD):
+For each pair of files:
+compute frequency distributions F1 and F2
+compute mean distribution F(w) = 1/2 (F1(w) + F2(w))
+compute KLD for each file
+compute JSD = sqrt(1/2 KLD(F1||F) + 1/2 KLD(F2||F))
+Missing words are treated as frequency 0
+Uses log2() and sqrt() from math library
+
+Analysis phase:
+All file pairs are compared (unordered pairs)
+For each pair:
+compute JSD
+compute combined word count
+Results stored in an array of structs
+
+Sorted using qsort():
+Results are sorted in decreasing order of combined word count so comparisons involving larger files appear first.
+
+Testing
+-------
+Correctness tests:
+Identical files -> JSD = 0
+Completely different files -> JSD = 1
+
+Tokenization tests:
+Case-insensitivity (Hello vs hello)
+Punctuation handling ("can't", "thieves'")
+Hyphen handling ("semi-auto")
+Numeric tokens ("123", "cs214")
+Whitespace edge cases
+
+Edge cases:
+Empty files
+Very long words (1000+ characters)
+Repeated words with different frequencies
+
+File handling:
+Single file input (error case)
+Nonexistent file (perror handling)
+Recursive directory traversal
+Suffix filtering (.txt only)
+Hidden files/directories ignored
+Mixed file and directory inputs
+
+Sorting:
+Verified ordering by combined word count
+
+Memory safety:
+Tested using AddressSanitizer and UBSan
+No memory leaks or undefined behavior detected
+
+Notes
+-----
+Program prints one comparison per unordered pair
+
+Output format:
+JSD file1 file2
+
+Errors are reported using perror() and execution continues
+
+Program exits with error if fewer than two valid files are found

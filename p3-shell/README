@@ -1,0 +1,185 @@
+CS214 P3
+--------
+Authors: Angel Bomova , Astin Huynh
+NetIDs: aab405 , ah1656
+
+How to build/run
+----------------
+cd P3
+make
+./mysh
+./mysh <file>
+cat <file> | ./mysh
+
+Files
+-----
+mysh.c - main shell loop. handles input reading, interactive vs batch mode, prompt printing, and overall control flow.
+mysh.h - struct definitions, constants, and function declarations used across all files.
+parser.c - tokenizes input and parses tokens into command and pipeline structures.
+executor.c - executes commands, handles forking, pipelines, redirection, and process control.
+builtins.c - write here
+wildcard.c - handles wildcard (*) expansion for matching filenames.
+utils.c - write here
+Makefile - builds mysh executable.
+README - README file.
+
+Program design
+--------------
+Shell loop:
+The shell runs in a loop:
+print prompt (interactive mode only)
+read input line
+tokenize input
+parse tokens into commands
+execute commands
+repeat until exit
+
+Input handling:
+Uses read() for input instead of standard I/O functions
+Supports both:
+interactive mode (terminal input)
+batch mode (file or piped input)
+
+Tokenization and parsing:
+Input is split into tokens based on whitespace
+Special tokens:
+< for input redirection
+
+> for output redirection
+> | for pipelines
+
+Parser builds a job structure:
+each job contains one or more commands
+each command contains:
+argument list (argv)
+input file (optional)
+output file (optional)
+
+Execution:
+Uses fork() and execv() to run external programs
+Parent process waits for child using waitpid()
+
+Redirection:
+Input redirection:
+open file with open()
+replace stdin using dup2()
+
+Output redirection:
+open/create file with open()
+replace stdout using dup2()
+
+Pipelines:
+Multiple commands connected with pipes
+pipe() used to create communication channels
+each command runs in a separate process
+stdout of one command connects to stdin of the next
+
+Built-in commands:
+cd:
+changes current working directory using chdir()
+
+pwd:
+prints current working directory using getcwd()
+
+which:
+searches PATH to find executable location
+
+exit:
+terminates the shell
+
+Built-ins run in the parent process unless part of a pipeline
+
+Wildcard expansion:
+Supports * wildcard for filename matching
+Matches files in the current directory or specified path
+If no match is found, the original token is used
+
+Uses directory traversal functions:
+opendir(), readdir(), closedir()
+
+Signal handling:
+Shell ignores SIGINT (Ctrl+C)
+Child processes use default signal handling
+If a child is terminated by a signal:
+shell prints termination status
+
+Batch mode behavior:
+When running in batch mode:
+stdin for child processes defaults to /dev/null unless redirected
+prevents hanging on input
+
+Testing
+-------
+Basic functionality:
+pwd
+cd ..
+cd
+which ls
+which cd
+
+External commands:
+ls
+ls -l
+/bin/ls
+notacommand
+
+Redirection:
+echo hello > out.txt
+cat out.txt
+cat < out.txt
+pwd > file.txt
+cat file.txt
+
+Pipelines:
+ls | wc
+echo hello | wc
+pwd | wc
+which ls | wc
+
+Wildcards:
+ls *.c
+ls *.h
+ls nofile*.xyz
+ls .*
+ls subdir/*.c
+
+Comments and syntax:
+
+# comment
+
+ls # comment
+ls |
+| ls
+ls >
+ls <
+ls < <
+
+Batch mode:
+printf "pwd\nwhich ls\nexit\n" > test1.sh
+./mysh test1.sh
+cat test1.sh | ./mysh
+
+Signal handling:
+sleep 5
+Ctrl+C terminates child but keeps shell running
+
+Edge cases:
+Empty input lines
+Invalid commands
+Nonexistent files
+Invalid redirection syntax
+Multiple pipes
+
+Notes
+-----
+If wildcard does not match any files, it is passed unchanged
+
+Built-in commands behave like external commands in pipelines
+
+Shell prints exit status for non-zero exits
+
+Program continues running after errors
+
+Conclusion
+----------
+This project demonstrates process control, parsing, file descriptor manipulation, and signal handling. The shell replicates core behavior of Unix shells for the supported features and handles both interactive and batch execution correctly.

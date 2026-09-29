@@ -1,0 +1,103 @@
+CS214 P1
+--------
+Authors: Angel Bomova , Astin Huynh
+NetIDs: aab405 , ah1656
+
+
+How to build/run
+----------------
+cd P1
+make
+./memgrind
+
+
+Files
+-----
+mymalloc.c   - custom heap allocator implementation (4096-byte heap)
+mymalloc.h   - required header that replaces malloc/free with mymalloc/myfree
+memgrind.c   - benchmarking workloads (5 workloads, executed 50 times and calculating the average time)
+Makefile     - builds memgrind
+AUTHOR       - NetIDs in this file
+README       - README file
+
+
+Allocator design
+----------------
+Heap:
+- Single global 4096-byte heap stored in a union to guarantee 8-byte alignment.
+
+Chunk format:
+- Each chunk begins with an 8-byte header (size_t).
+- The header stores:
+  - chunk size in bytes (including the header), always a multiple of 8
+  - allocated/free flag in the lowest bit (1 = allocated, 0 = free)
+
+Alignment and sizes:
+- Requested payload sizes are rounded up to a multiple of 8.
+- Minimum chunk size is 16 bytes (8-byte header + minimum 8-byte payload).
+
+Allocation policy:
+- Uses first-fit search through the heap to find a free chunk.
+- Splits a free chunk if the remainder is at least 16 bytes; otherwise uses the entire chunk.
+- On failure, prints:
+  malloc: Unable to allocate N bytes (file:line)
+  and returns NULL.
+
+Free policy and error handling:
+- Validates that the pointer:
+  - lies within the heap,
+  - matches exactly the start of a chunk payload,
+  - is not already freed (double-free check).
+- If invalid, prints:
+  free: Inappropriate pointer (file:line)
+  and exits with status 2.
+- On valid free, marks the chunk as free and coalesces adjacent free chunks.
+
+Leak detection:
+- leak_check() is registered with atexit().
+- At program termination, if any blocks remain allocated, prints:
+  mymalloc: X bytes leaked in Y objects.
+- Leak output is suppressed if the program exits due to an invalid free error.
+
+
+Memgrind Workloads
+------------------
+(Each workload is repeated 50 times and the average runtime is printed.)
+
+Workload 1:
+- Mallocs a 1-byte chunk and immediately frees it
+- Repeats 120 times
+- Purpose: Tests the overhead of a simple allocation/free pair
+
+Workload 2:
+- Mallocs 120 1-byte chunks and stores them in an array
+- Once the array is full, frees all 120 chunks
+- Purpose: Tests the allocator's ability to handle multiple active allocations simultaneously without corrupting the heap structure
+
+Workload 3:
+- Initializes an array of 120 pointers
+- Repeatedly chooses randomly between allocating a 1-byte chunk (if space allows) and freeing a previously allocated chunk (if one exists)
+- Continues until exactly 120 allocations have been performed
+- Purpose: Simulates a more chaotic, random usage pattern to ensure stability
+
+Workload 4:
+- Allocates 120 small chunks to fill the heap
+- Frees all even-numbered chunks first (creating holes)
+- Frees all odd-numbered chunks second
+- Purpose: This forces the allocator to handle fragmentation and validates that the coalescing logic correctly merges non-adjacent free blocks when their neighbors are eventually freed
+
+Workload 5:
+- Allocates 100 "Node" structures (approx. 16-24 bytes each)
+- Links them together into a linked list
+- Traverses and frees the list
+- Purpose: Simulates a realistic data structure workload where objects are larger than 1 byte and pointers are stored inside the allocated memory
+
+Performance Results
+-------------------
+- Average execution time in microseconds over 50 iterations
+
+Workload 1: 12 microseconds
+Workload 2: 83 microseconds
+Workload 3: 30 microseconds
+Workload 4: 86 microseconds
+Workload 5: 87 microseconds

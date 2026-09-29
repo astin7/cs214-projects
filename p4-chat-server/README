@@ -1,0 +1,137 @@
+CS214 P4
+--------
+Authors: Angel Bomova , Astin Huynh
+NetIDs: aab405 , ah1656
+
+How to build/run
+----------------
+cd P4
+make
+./chatd <port>
+
+To test manually:
+./test_client localhost <port>
+
+Files
+-----
+chatd.c - main server file. sets up the listening socket, handles poll loop, accepts clients, and processes incoming data.
+chatd.h - shared definitions, constants, structs, and function declarations used across all files.
+protocol.c - parses incoming protocol messages, validates format, and handles NAM, SET, MSG, WHO, and ERR responses.
+clientlist.c - maintains connected clients, including adding/removing clients and searching by file descriptor or name.
+utils.c - helper functions such as write_all and validation functions for names and message text.
+test_client.c - write here
+Makefile - builds the chatd executable.
+README - README file.
+AUTHOR - AUTHOR file with NetIDs.
+
+Program design
+--------------
+Server model:
+The server uses a single-threaded design with poll() to handle multiple clients concurrently.
+Each connected client is represented by a file descriptor and stored in a fixed-size array.
+
+Main loop:
+The server runs an infinite loop:
+poll() waits for activity
+accept() handles new connections
+read() processes incoming messages
+disconnected clients are removed
+
+Protocol format:
+All messages follow the format:
+version|type|length|fields...|
+
+Version:
+"1" is required
+
+Types:
+NAM - set username
+SET - set status
+MSG - send message
+WHO - query users
+ERR - error message
+
+The length field specifies the exact number of bytes in the message body.
+
+Client structure:
+Each client stores:
+file descriptor
+named flag (whether NAM has been completed)
+username (max 32 chars)
+status (max 64 chars)
+
+Message handling:
+NAM:
+validates name length and allowed characters
+ensures name is unique
+marks client as named
+
+SET:
+updates client status
+broadcasts status change to all clients
+
+MSG:
+broadcasts to all users if recipient is "#all"
+sends private message if recipient is a specific user
+
+WHO:
+returns list of all users for "#all"
+returns single user's status if specific name is requested
+
+Error handling:
+ERR 0 - malformed or unreadable message (connection closed)
+ERR 1 - name already in use
+ERR 2 - unknown recipient
+ERR 3 - illegal character
+ERR 4 - too long
+ERR 5 - invalid state (e.g., MSG or WHO before NAM)
+
+Validation:
+Names must be 1–32 characters
+Allowed characters: letters, digits, '-' and '_'
+
+Status and messages:
+Characters must be ASCII 32–126
+Status max length: 64
+Message max length: 80
+
+Testing
+-------
+Basic functionality:
+NAM with valid and invalid names
+SET with valid status
+WHO #all and WHO <user>
+MSG to #all and private MSG
+
+Error testing:
+Malformed messages (missing fields, incorrect length)
+Duplicate names
+Illegal characters in names
+Unknown recipients
+Commands before NAM
+
+Multi-client testing:
+Multiple clients connected simultaneously using test_client
+Verified broadcast messages appear on all clients
+Verified private messages only reach intended recipient
+
+test_client testing:
+write here
+
+Edge cases:
+Empty input
+Long names and messages
+Client disconnects
+Invalid protocol formatting
+
+Notes
+-----
+The server assumes one complete message per read() call.
+Partial TCP message handling is not implemented.
+
+test_client notes:
+write here
+
+Conclusion
+----------
+This project demonstrates socket programming, multiplexing with poll(), protocol parsing, and multi-client communication. The server correctly implements the required protocol and handles multiple clients concurrently.
