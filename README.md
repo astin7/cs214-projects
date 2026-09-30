@@ -48,6 +48,6 @@ C, POSIX APIs (I/O, process control, sockets), pthreads, Make
 
 ## Note
 
-All four projects were completed collaboratively with an assigned partner,
-per CS214's project structure. Contributions were shared across design,
+All four projects were completed collaboratively with my partner, Angel Bomova,
+as suggested by CS214's project structure. Contributions were shared across design,
 implementation, and testing for each project.
